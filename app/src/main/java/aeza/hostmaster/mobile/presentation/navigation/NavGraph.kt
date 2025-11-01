@@ -1,36 +1,63 @@
 package aeza.hostmaster.mobile.presentation.navigation
 
-import androidx.compose.material3.*
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.*
-import aeza.hostmaster.mobile.presentation.screens.*
-import android.annotation.SuppressLint
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import aeza.hostmaster.mobile.domain.model.CheckType
+import aeza.hostmaster.mobile.presentation.screens.CheckScreen
+import androidx.annotation.SuppressLint
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun NavGraph(navController: NavHostController) {
-    val items = listOf("ping", "http", "tcp", "dns", "info")
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val items = CheckType.items
+
     Scaffold(
         bottomBar = {
             NavigationBar {
-                items.forEach { screen ->
+                items.forEach { type ->
                     NavigationBarItem(
-                        selected = navController.currentDestination?.route == screen,
-                        onClick = { navController.navigate(screen) },
-                        label = { Text(screen.uppercase()) },
+                        selected = currentRoute == type.route,
+                        onClick = {
+                            if (currentRoute != type.route) {
+                                navController.navigate(type.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        label = { Text(type.title) },
                         icon = {}
                     )
                 }
             }
         }
-    ) {
-        NavHost(navController, startDestination = "ping") {
-            composable("ping") { CheckScreen("ping") }
-            composable("http") { CheckScreen("http") }
-            composable("tcp") { CheckScreen("tcp") }
-            composable("dns") { CheckScreen("dns") }
-            composable("info") { CheckScreen("info") }
+    ) { paddingValues ->
+        NavHost(
+            navController = navController,
+            startDestination = CheckType.Ping.route,
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            items.forEach { type ->
+                composable(type.route) {
+                    CheckScreen(checkType = type)
+                }
+            }
         }
     }
 }
