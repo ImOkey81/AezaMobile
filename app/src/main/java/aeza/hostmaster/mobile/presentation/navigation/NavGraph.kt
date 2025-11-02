@@ -13,7 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import aeza.hostmaster.mobile.domain.model.CheckType
 import aeza.hostmaster.mobile.presentation.screens.CheckScreen
-import androidx.annotation.SuppressLint
+import android.annotation.SuppressLint
+
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
 

@@ -35,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import aeza.hostmaster.mobile.domain.model.CheckResult
 import aeza.hostmaster.mobile.domain.model.CheckType
 import aeza.hostmaster.mobile.presentation.viewmodel.CheckViewModel
+import androidx.compose.runtime.setValue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

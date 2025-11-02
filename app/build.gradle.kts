@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.kapt")
 }
-
+apply(plugin = "dagger.hilt.android.plugin")
 android {
     namespace = "aeza.hostmaster.mobile"
     compileSdk = 36
@@ -39,6 +39,9 @@ android {
         compose = true
     }
 }
+kapt {
+    correctErrorTypes = true
+}
 
 dependencies {
     // --- AndroidX Core ---
@@ -65,8 +68,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
     // --- Hilt Dependency Injection ---
-    implementation("com.google.dagger:hilt-android:2.52")
-    kapt("com.google.dagger:hilt-compiler:2.52")
+    implementation("com.google.dagger:hilt-android:${libs.versions.hilt.get()}")
+    kapt("com.google.dagger:hilt-compiler:${libs.versions.hilt.get()}")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // --- Retrofit / Networking ---
