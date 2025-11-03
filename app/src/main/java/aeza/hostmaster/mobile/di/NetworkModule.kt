@@ -9,7 +9,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import java.nio.charset.StandardCharsets
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -26,30 +25,17 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .apply {
-            val credentials = resolveCredentials()
-            if (credentials != null) {
+            if (BuildConfig.API_USERNAME.isNotBlank()) {
+                val credentials = Credentials.basic(
+                    BuildConfig.API_USERNAME,
+                    BuildConfig.API_PASSWORD
+                )
                 addInterceptor { chain ->
                     val request = chain.request().newBuilder()
-                        .header("Authorization", credentials)
+                        .addHeader("Authorization", credentials)
                         .build()
                     chain.proceed(request)
                 }
-                authenticator { _, response ->
-                    if (response.request.header("Authorization") != null) {
-                        null
-                    } else {
-                        response.request.newBuilder()
-                            .header("Authorization", credentials)
-                            .build()
-                    }
-                }
-            }
-
-            if (BuildConfig.DEBUG) {
-                val logging = HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
-                addInterceptor(logging)
             }
         }
         .build()
@@ -77,25 +63,5 @@ object NetworkModule {
 
 private fun resolveBaseUrl(): String {
     val configured = BuildConfig.API_BASE_URL.ifBlank { DEFAULT_BASE_URL }
-    val normalised = configured.ensureScheme()
-    return if (normalised.endsWith("/")) normalised else "$normalised/"
-}
-
-private fun resolveCredentials(): String? {
-    val username = BuildConfig.API_USERNAME
-    val password = BuildConfig.API_PASSWORD
-    if (username.isBlank() || password.isBlank()) {
-        return null
-    }
-    return Credentials.basic(username, password, StandardCharsets.UTF_8)
-}
-
-private fun String.ensureScheme(): String {
-    val trimmed = trim()
-    if (trimmed.startsWith("http://", ignoreCase = true) ||
-        trimmed.startsWith("https://", ignoreCase = true)
-    ) {
-        return trimmed
-    }
-    return "https://$trimmed"
+    return if (configured.endsWith("/")) configured else "$configured/"
 }
