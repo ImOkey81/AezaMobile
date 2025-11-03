@@ -1,5 +1,6 @@
 package aeza.hostmaster.mobile.di
 
+import aeza.hostmaster.mobile.BuildConfig
 import aeza.hostmaster.mobile.data.remote.ApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -8,11 +9,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val LOCAL_BASE_URL = "http://10.0.2.2:8080/api/"
+private const val DEFAULT_BASE_URL = "http://10.0.2.2:8080/api/"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,7 +22,22 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .apply {
+            if (BuildConfig.API_USERNAME.isNotBlank()) {
+                val credentials = Credentials.basic(
+                    BuildConfig.API_USERNAME,
+                    BuildConfig.API_PASSWORD
+                )
+                addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .addHeader("Authorization", credentials)
+                        .build()
+                    chain.proceed(request)
+                }
+            }
+        }
+        .build()
 
     @Provides
     @Singleton
@@ -32,7 +49,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit =
         Retrofit.Builder()
-            .baseUrl(LOCAL_BASE_URL)
+            .baseUrl(resolveBaseUrl())
             .addConverterFactory(GsonConverterFactory.create(gson))
             .client(client)
             .build()
@@ -41,4 +58,9 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService =
         retrofit.create(ApiService::class.java)
+}
+
+private fun resolveBaseUrl(): String {
+    val configured = BuildConfig.API_BASE_URL.ifBlank { DEFAULT_BASE_URL }
+    return if (configured.endsWith("/")) configured else "$configured/"
 }

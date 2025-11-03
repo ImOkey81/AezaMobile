@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,20 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
 }
 apply(plugin = "dagger.hilt.android.plugin")
+
+private fun String.toBuildConfigString(): String =
+    this.replace("\\", "\\\\").replace("\"", "\\\"")
+
+private val localProperties: Properties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+private val apiBaseUrl = localProperties.getProperty("api.baseUrl", "http://10.0.2.2:8080/api/")
+private val apiUsername = localProperties.getProperty("api.username", "siderea_78")
+private val apiPassword = localProperties.getProperty("api.password", "sidereaGISART_78")
 android {
     namespace = "aeza.hostmaster.mobile"
     compileSdk = 36
@@ -17,6 +33,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.toBuildConfigString()}\"")
+        buildConfigField("String", "API_USERNAME", "\"${apiUsername.toBuildConfigString()}\"")
+        buildConfigField("String", "API_PASSWORD", "\"${apiPassword.toBuildConfigString()}\"")
     }
 
     buildTypes {
@@ -37,6 +57,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 kapt {
