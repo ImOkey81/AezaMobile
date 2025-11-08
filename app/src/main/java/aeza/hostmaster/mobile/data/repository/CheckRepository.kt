@@ -15,28 +15,13 @@ class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: String) =
-        runCatching {
-            val normalizedType = type.uppercase(Locale.ROOT)
-            api.submitCheck(
-                CheckRequestDto(
-                    target = target,
-                    type = normalizedType,
-                    checkType = normalizedType
-                )
+        api.submitCheck(
+            CheckRequestDto(
+                target = target,
+                type = type.uppercase(Locale.ROOT),
+                checkType = type.uppercase(Locale.ROOT)
             )
-        }.getOrElse { throwable ->
-            if (throwable is CancellationException) throw throwable
-            throw when (throwable) {
-                is HttpException -> IllegalArgumentException(
-                    parseErrorMessage(throwable.response()?.errorBody())
-                        ?: throwable.response()?.message()
-                        ?: "Некорректный запрос",
-                    throwable
-                )
-                is IOException -> IOException("Не удалось подключиться к серверу", throwable)
-                else -> RuntimeException(throwable.message ?: "Неизвестная ошибка", throwable)
-            }
-        }
+        )
 
     suspend fun getStatus(jobId: String) = api.getCheckStatus(jobId)
 
