@@ -1,5 +1,6 @@
 package aeza.hostmaster.mobile.presentation.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import aeza.hostmaster.mobile.data.mapper.CheckMapper
@@ -9,6 +10,7 @@ import aeza.hostmaster.mobile.domain.model.isTerminal
 import aeza.hostmaster.mobile.domain.usecase.GetCheckStatusUseCase
 import aeza.hostmaster.mobile.domain.usecase.SubmitCheckUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,9 +47,8 @@ class CheckViewModel @Inject constructor(
     }
 
     fun submit(target: String) {
-        val sanitizedTarget = target.trim()
         val type = _state.value.checkType ?: return
-        if (sanitizedTarget.isBlank()) {
+        val sanitizedTarget = sanitizeTarget(target, type)?.takeIf { it.isNotBlank() } ?: run {
             _state.update { it.copy(errorMessage = "Введите адрес для проверки") }
             return
         }
@@ -79,6 +80,67 @@ class CheckViewModel @Inject constructor(
 
     fun dismissError() {
         _state.update { it.copy(errorMessage = null) }
+    }
+
+    private fun sanitizeTarget(rawInput: String, type: CheckType): String? {
+        val trimmed = rawInput.trim()
+        if (trimmed.isEmpty()) return null
+        return when (type) {
+            is CheckType.Http -> sanitizeHttpTarget(trimmed)
+            is CheckType.Tcp -> sanitizeTcpTarget(trimmed)
+            is CheckType.Ping,
+            is CheckType.Dns,
+            is CheckType.Info -> sanitizeHostLikeTarget(trimmed)
+        }
+    }
+
+    private fun sanitizeHostLikeTarget(value: String): String? {
+        val uri = Uri.parse(value)
+        val hostFromUri = uri.host?.takeIf { it.isNotBlank() }
+        val manual = value.substringAfter("://", value)
+            .substringBefore('/')
+            .substringBefore('?')
+            .substringBefore('#')
+        val candidate = (hostFromUri ?: manual).trim()
+        val withoutFragments = candidate
+            .substringBefore('#')
+            .substringBefore('?')
+        val host = when {
+            hostFromUri != null -> withoutFragments
+            withoutFragments.count { it == ':' } > 1 -> withoutFragments // IPv6 address
+            else -> withoutFragments.substringBefore(':')
+        }.trim().trimEnd('.')
+        return host.takeIf { it.isNotEmpty() }
+    }
+
+    private fun sanitizeHttpTarget(value: String): String? {
+        val candidate = if ("://" in value) value else "https://$value"
+        val uri = Uri.parse(candidate)
+        val scheme = uri.scheme?.lowercase(Locale.ROOT)
+        val host = uri.host
+        if (host.isNullOrBlank() || scheme == null || scheme !in listOf("http", "https")) {
+            return null
+        }
+        val builder = uri.buildUpon()
+        if (uri.path.isNullOrEmpty()) {
+            builder.path("/")
+        }
+        return builder.build().toString()
+    }
+
+    private fun sanitizeTcpTarget(value: String): String? {
+        val withoutScheme = value.substringAfter("://", value)
+        val hostPort = withoutScheme
+            .substringBefore('/')
+            .substringBefore('?')
+            .substringBefore('#')
+        val delimiterIndex = hostPort.lastIndexOf(':')
+        if (delimiterIndex <= 0 || delimiterIndex == hostPort.length - 1) return null
+        val hostPart = hostPort.substring(0, delimiterIndex)
+        val portPart = hostPort.substring(delimiterIndex + 1)
+        val host = sanitizeHostLikeTarget(hostPart) ?: return null
+        val port = portPart.toIntOrNull()?.takeIf { it in 1..65535 } ?: return null
+        return "$host:$port"
     }
 
     private suspend fun waitForCompletion(jobId: String, type: CheckType): CheckResult {
