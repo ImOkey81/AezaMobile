@@ -9,6 +9,7 @@ import com.google.gson.annotations.SerializedName
  */
 data class CheckRequestDto(
     val target: String,
-    @SerializedName(value = "checkTypes", alternate = ["check_types"])
-    val checkTypes: List<String>
+    val type: String,
+    @SerializedName(value = "checkType", alternate = ["check_type"])
+    val checkType: String
 )

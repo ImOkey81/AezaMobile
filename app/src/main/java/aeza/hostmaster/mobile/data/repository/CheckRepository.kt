@@ -7,6 +7,7 @@ import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import okhttp3.ResponseBody
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.HttpException
@@ -15,53 +16,18 @@ class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: String) =
-        runCatching {
-            val normalizedType = type.uppercase(Locale.ROOT)
-            Log.d(TAG, "Submitting $normalizedType check for $target")
-            api.submitCheck(
-                CheckRequestDto(
-                    target = target,
-                    checkTypes = listOf(normalizedType)
-                )
-            ).also {
-                Log.d(TAG, "Backend accepted job ${'$'}{it.jobId} for $normalizedType check")
-            }
-        }.getOrElse { throwable ->
-            if (throwable is CancellationException) throw throwable
-            throw when (throwable) {
-                is HttpException -> {
-                    val rawBody = runCatching { throwable.response()?.errorBody()?.string() }.getOrNull()
-                    Log.w(
-                        TAG,
-                        "HTTP ${'$'}{throwable.code()} while submitting check: ${'$'}{throwable.message()}" +
-                            (rawBody?.let { " | body=$it" } ?: ""),
-                        throwable
-                    )
-                    IllegalArgumentException(
-                        parseErrorMessage(rawBody)
-                            ?: throwable.response()?.message()
-                            ?: "Некорректный запрос",
-                        throwable
-                    )
-                }
-                is IOException -> {
-                    Log.e(TAG, "Network error during check submission", throwable)
-                    IOException("Не удалось подключиться к серверу", throwable)
-                }
-                else -> {
-                    Log.e(TAG, "Unexpected error during check submission", throwable)
-                    RuntimeException(throwable.message ?: "Неизвестная ошибка", throwable)
-                }
-            }
-        }
+        api.submitCheck(
+            CheckRequestDto(
+                target = target,
+                type = type.uppercase(Locale.ROOT),
+                checkType = type.uppercase(Locale.ROOT)
+            )
+        )
 
-    suspend fun getStatus(jobId: String) =
-        api.getCheckStatus(jobId).also {
-            Log.d(TAG, "Status for job $jobId: ${'$'}{it.status}")
-        }
+    suspend fun getStatus(jobId: String) = api.getCheckStatus(jobId)
 
-    private fun parseErrorMessage(rawBody: String?): String? {
-        val raw = rawBody?.takeIf { it.isNotBlank() } ?: return null
+    private fun parseErrorMessage(body: ResponseBody?): String? {
+        val raw = runCatching { body?.string() }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
         return try {
             val json = JSONObject(raw)
             when {
@@ -86,9 +52,5 @@ class CheckRepository @Inject constructor(
         } catch (_: JSONException) {
             null
         }
-    }
-
-    private companion object {
-        private const val TAG = "CheckRepository"
     }
 }
