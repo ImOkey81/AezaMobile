@@ -2,6 +2,7 @@ package aeza.hostmaster.mobile.data.repository
 
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
 import aeza.hostmaster.mobile.data.remote.ApiService
+import java.util.Locale
 import javax.inject.Inject
 
 class CheckRepository @Inject constructor(
