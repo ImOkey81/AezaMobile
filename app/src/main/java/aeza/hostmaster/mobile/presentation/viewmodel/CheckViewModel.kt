@@ -55,7 +55,7 @@ class CheckViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 _state.update { it.copy(isLoading = true, errorMessage = null) }
-                val submitResponse = submitCheck(sanitizedTarget, type.backendName)
+                val submitResponse = submitCheck(sanitizedTarget, type)
                 val pendingResult = mapper.toDomain(submitResponse, type)
                 updateHistory(pendingResult)
                 val finalResult = waitForCompletion(pendingResult.jobId, type)

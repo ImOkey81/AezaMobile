@@ -3,6 +3,7 @@ package aeza.hostmaster.mobile.data.repository
 import android.util.Log
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
 import aeza.hostmaster.mobile.data.remote.ApiService
+import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
@@ -15,7 +16,7 @@ import retrofit2.HttpException
 class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
-    suspend fun submitCheck(target: String, type: String) =
+    suspend fun submitCheck(target: String, type: CheckType) =
         api.submitCheck(
             CheckRequestDto(
                 target = target,
