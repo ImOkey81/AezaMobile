@@ -20,7 +20,7 @@ class CheckRepository @Inject constructor(
         api.submitCheck(
             CheckRequestDto(
                 target = target,
-                checkTypes = listOf(type.backendName.uppercase(Locale.ROOT))
+                checkTypes = listOf(type.uppercase(Locale.ROOT))
             )
         )
 
