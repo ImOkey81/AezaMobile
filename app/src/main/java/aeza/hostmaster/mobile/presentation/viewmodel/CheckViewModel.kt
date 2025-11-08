@@ -49,7 +49,7 @@ class CheckViewModel @Inject constructor(
     fun submit(target: String) {
         val type = _state.value.checkType ?: return
         val sanitizedTarget = sanitizeTarget(target, type)?.takeIf { it.isNotBlank() } ?: run {
-            _state.update { it.copy(errorMessage = "Введите адрес для проверки") }
+            _state.update { it.copy(errorMessage = validationErrorMessage(type)) }
             return
         }
         viewModelScope.launch {
@@ -92,6 +92,14 @@ class CheckViewModel @Inject constructor(
             is CheckType.Dns,
             is CheckType.Info -> sanitizeHostLikeTarget(trimmed)
         }
+    }
+
+    private fun validationErrorMessage(type: CheckType): String = when (type) {
+        is CheckType.Http -> "Введите корректный URL вида https://example.com"
+        is CheckType.Tcp -> "Введите адрес и порт в формате host:port"
+        is CheckType.Ping,
+        is CheckType.Dns,
+        is CheckType.Info -> "Введите домен или IP-адрес"
     }
 
     private fun sanitizeHostLikeTarget(value: String): String? {
