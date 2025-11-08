@@ -19,8 +19,7 @@ class CheckRepository @Inject constructor(
         api.submitCheck(
             CheckRequestDto(
                 target = target,
-                type = type.uppercase(Locale.ROOT),
-                checkType = type.uppercase(Locale.ROOT)
+                checkTypes = listOf(type.uppercase(Locale.ROOT))
             )
         )
 
