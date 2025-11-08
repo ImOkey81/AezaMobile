@@ -5,6 +5,6 @@ import com.google.gson.annotations.SerializedName
 data class CheckRequestDto(
     val target: String,
     val type: String,
-    @SerializedName("check_type")
+    @SerializedName(value = "check_type", alternate = ["checkType"])
     val checkType: String
 )
