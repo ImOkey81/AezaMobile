@@ -8,7 +8,7 @@ class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: String) =
-        api.submitCheck(CheckRequestDto(target, type))
+        api.submitCheck(CheckRequestDto(target, type, type))
 
     suspend fun getStatus(jobId: String) = api.getCheckStatus(jobId)
 }
