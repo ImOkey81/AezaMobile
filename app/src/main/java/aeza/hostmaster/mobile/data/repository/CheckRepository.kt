@@ -1,5 +1,6 @@
 package aeza.hostmaster.mobile.data.repository
 
+import android.util.Log
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import java.io.IOException

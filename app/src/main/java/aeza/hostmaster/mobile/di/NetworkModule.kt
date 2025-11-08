@@ -1,5 +1,6 @@
 package aeza.hostmaster.mobile.di
 
+import android.util.Log
 import aeza.hostmaster.mobile.BuildConfig
 import aeza.hostmaster.mobile.data.remote.ApiService
 import com.google.gson.Gson
@@ -25,6 +26,14 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .apply {
+            if (BuildConfig.DEBUG) {
+                val logging = HttpLoggingInterceptor { message ->
+                    Log.d("ApiService", message)
+                }.apply {
+                    level = HttpLoggingInterceptor.Level.BODY
+                }
+                addInterceptor(logging)
+            }
             if (BuildConfig.API_USERNAME.isNotBlank()) {
                 val credentials = Credentials.basic(
                     BuildConfig.API_USERNAME,
