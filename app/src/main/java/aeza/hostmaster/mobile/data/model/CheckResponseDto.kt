@@ -16,8 +16,10 @@ data class CheckResponseDto(
     val type: String? = null,
     @SerializedName(value = "target", alternate = ["url", "host"])
     val target: String? = null,
-    @SerializedName(value = "results", alternate = ["result"])
+    @SerializedName(value = "results", alternate = ["result", "results_json"])
     val results: JsonElement? = null,
+    @SerializedName(value = "payload", alternate = ["data", "payload_json"])
+    val payload: JsonElement? = null,
     @SerializedName(value = "createdAt", alternate = ["created_at"])
     val createdAt: String? = null,
     @SerializedName(value = "updatedAt", alternate = ["updated_at"])
