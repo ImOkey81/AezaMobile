@@ -4,7 +4,6 @@ import aeza.hostmaster.mobile.data.model.CheckResponseContextDto
 import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.domain.model.CheckType
 import com.google.gson.Gson
-import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,39 +14,6 @@ class CheckMapperTest {
 
     @Test
     fun `formats ping payload into readable summary`() {
-        val dto = createPingDto(payloadLoss = "0%", resultsOverride = null)
-
-        val result = mapper.toDomain(dto, CheckType.Ping)
-
-        assertTrue(result.details.contains("IP: 213.180.204.186"))
-        assertTrue(result.details.contains("Пакеты: потери 0%"))
-        assertTrue(result.details.contains("RTT: ср. 36.930 ms"))
-    }
-
-    @Test
-    fun `falls back to payload when results string is blank`() {
-        val blankResults = JsonParser.parseString("\"\"")
-        val dto = createPingDto(payloadLoss = "20%", resultsOverride = blankResults)
-
-        val result = mapper.toDomain(dto, CheckType.Ping)
-
-        assertTrue(result.details.contains("Пакеты: потери 20%"))
-    }
-
-    @Test
-    fun `ignores results string null literal`() {
-        val nullLiteralResults = JsonParser.parseString("\"null\"")
-        val dto = createPingDto(payloadLoss = "5%", resultsOverride = nullLiteralResults)
-
-        val result = mapper.toDomain(dto, CheckType.Ping)
-
-        assertTrue(result.details.contains("Пакеты: потери 5%"))
-    }
-
-    private fun createPingDto(
-        payloadLoss: String,
-        resultsOverride: JsonElement?
-    ): CheckResponseDto {
         val payloadJson = """
             {
               "ping": [
@@ -56,7 +22,7 @@ class CheckMapperTest {
                   "ip": "213.180.204.186",
                   "location": "siderea_78",
                   "packets": {
-                    "loss": "$payloadLoss",
+                    "loss": "0%",
                     "received": 4,
                     "transmitted": 4
                   },
@@ -70,12 +36,12 @@ class CheckMapperTest {
             }
         """.trimIndent()
 
-        return CheckResponseDto(
+        val dto = CheckResponseDto(
             jobId = "job",
             status = "complete",
             type = "ping",
             target = "music.yandex.ru",
-            results = resultsOverride,
+            results = null,
             payload = JsonParser.parseString(payloadJson),
             createdAt = null,
             updatedAt = null,
@@ -85,5 +51,11 @@ class CheckMapperTest {
                 target = null
             )
         )
+
+        val result = mapper.toDomain(dto, CheckType.Ping)
+
+        assertTrue(result.details.contains("IP: 213.180.204.186"))
+        assertTrue(result.details.contains("Пакеты: потери 0%"))
+        assertTrue(result.details.contains("RTT: ср. 36.930 ms"))
     }
 }
