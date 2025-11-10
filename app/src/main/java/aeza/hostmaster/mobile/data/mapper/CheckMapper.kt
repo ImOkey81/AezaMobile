@@ -4,6 +4,7 @@ import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.domain.model.CheckResult
 import aeza.hostmaster.mobile.domain.model.CheckType
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import javax.inject.Inject
 
 class CheckMapper @Inject constructor(
@@ -11,11 +12,20 @@ class CheckMapper @Inject constructor(
 ) {
     fun toDomain(dto: CheckResponseDto, fallbackType: CheckType): CheckResult {
         val type = CheckType.fromBackendName(dto.type) ?: fallbackType
-        val details = dto.results?.let { results ->
-            if (results.isJsonPrimitive) {
-                results.asString
+        val detailsElement = dto.results?.takeIf { !it.isJsonNull }
+            ?: dto.payload?.takeIf { !it.isJsonNull }
+        val normalizedDetails = detailsElement?.let { extractPayload(it) }
+        val details = normalizedDetails?.let { element ->
+            if (element.isJsonPrimitive) {
+                val primitive = element.asJsonPrimitive
+                when {
+                    primitive.isString -> primitive.asString
+                    primitive.isBoolean -> primitive.asBoolean.toString()
+                    primitive.isNumber -> primitive.asNumber.toString()
+                    else -> primitive.toString()
+                }
             } else {
-                gson.toJson(results)
+                gson.toJson(element)
             }
         } ?: "Нет данных"
 
@@ -38,5 +48,21 @@ class CheckMapper @Inject constructor(
             details = details,
             timestampMillis = timestamp
         )
+    }
+
+    private tailrec fun extractPayload(element: JsonElement): JsonElement {
+        if (element.isJsonObject) {
+            val obj = element.asJsonObject
+            val nestedKeys = listOf("payload", "data", "result")
+            for (key in nestedKeys) {
+                if (obj.has(key)) {
+                    val nested = obj.get(key)
+                    if (nested != null && !nested.isJsonNull) {
+                        return extractPayload(nested)
+                    }
+                }
+            }
+        }
+        return element
     }
 }
