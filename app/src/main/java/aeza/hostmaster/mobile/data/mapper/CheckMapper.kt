@@ -10,6 +10,10 @@ import javax.inject.Inject
 class CheckMapper @Inject constructor(
     private val gson: Gson
 ) {
+    private val prettyGson: Gson by lazy(LazyThreadSafetyMode.NONE) {
+        GsonBuilder().setPrettyPrinting().create()
+    }
+
     fun toDomain(dto: CheckResponseDto, fallbackType: CheckType): CheckResult {
         val type = CheckType.fromBackendName(dto.type) ?: fallbackType
         val detailsElement = dto.results?.takeIf { !it.isJsonNull }
