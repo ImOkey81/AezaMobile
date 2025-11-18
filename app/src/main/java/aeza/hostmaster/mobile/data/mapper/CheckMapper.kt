@@ -14,7 +14,9 @@ class CheckMapper @Inject constructor(
     private val gson: Gson
 ) {
     private val prettyGson: Gson by lazy(LazyThreadSafetyMode.NONE) {
-        GsonBuilder().setPrettyPrinting().create()
+        gson.newBuilder()
+            .setPrettyPrinting()
+            .create()
     }
 
     fun toDomain(dto: CheckResponseDto, fallbackType: CheckType): CheckResult {
