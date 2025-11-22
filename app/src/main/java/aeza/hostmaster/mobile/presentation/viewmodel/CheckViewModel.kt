@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 private const val HISTORY_LIMIT = 20
 private const val POLL_DELAY_MILLIS = 1000L
-private const val POLL_ATTEMPTS = 30
+private const val POLL_ATTEMPTS = 60
 
 data class CheckUiState(
     val checkType: CheckType? = null,
@@ -151,9 +151,9 @@ class CheckViewModel @Inject constructor(
         return "$host:$port"
     }
 
-    private suspend fun waitForCompletion(jobId: String, type: CheckType): CheckResult {
+    private suspend fun waitForCompletion(checkId: String, type: CheckType): CheckResult {
         repeat(POLL_ATTEMPTS) { attempt ->
-            val statusResponse = getCheckStatus(jobId)
+            val statusResponse = getCheckStatus(checkId)
             val result = mapper.toDomain(statusResponse, type)
             if (result.isTerminal() || attempt == POLL_ATTEMPTS - 1) {
                 return result
@@ -161,7 +161,7 @@ class CheckViewModel @Inject constructor(
             delay(POLL_DELAY_MILLIS)
         }
         // Should not reach here because of return inside loop, but keep compiler happy
-        val fallbackResponse = getCheckStatus(jobId)
+        val fallbackResponse = getCheckStatus(checkId)
         return mapper.toDomain(fallbackResponse, type)
     }
 
