@@ -6,6 +6,6 @@ import javax.inject.Inject
 class GetCheckStatusUseCase @Inject constructor(
     private val repository: CheckRepository
 ) {
-    suspend operator fun invoke(jobId: String) =
-        repository.getStatus(jobId)
+    suspend operator fun invoke(checkId: String) =
+        repository.getStatus(checkId)
 }
