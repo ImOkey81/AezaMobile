@@ -24,8 +24,8 @@ class CheckRepository @Inject constructor(
         )
     }
 
-    suspend fun getStatus(checkId: String) = executeWithErrorHandling {
-        api.getCheckStatus(checkId)
+    suspend fun getResult(jobId: String) = executeWithErrorHandling {
+        api.getCheckResult(jobId)
     }
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {
