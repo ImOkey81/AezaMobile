@@ -25,14 +25,8 @@ class CheckRepository @Inject constructor(
         )
     }
 
-    suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
-        val response = api.getCheckResult(jobId)
-        when {
-            response.isSuccessful -> response.body()
-                ?: CheckResponseDto(jobId = jobId, status = "pending")
-            response.code() == 202 -> CheckResponseDto(jobId = jobId, status = "pending")
-            else -> throw HttpException(response)
-        }
+    suspend fun getResult(jobId: String) = executeWithErrorHandling {
+        api.getCheckResult(jobId)
     }
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {

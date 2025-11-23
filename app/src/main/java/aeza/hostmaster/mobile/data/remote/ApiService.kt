@@ -11,5 +11,5 @@ interface ApiService {
     suspend fun submitCheck(@Body request: CheckRequestDto): CheckResponseDto
 
     @GET("checks/{jobId}/result")
-    suspend fun getCheckResult(@Path("jobId") jobId: String): Response<CheckResponseDto>
+    suspend fun getCheckResult(@Path("jobId") jobId: String): CheckResponseDto
 }
