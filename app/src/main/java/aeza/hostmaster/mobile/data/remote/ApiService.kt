@@ -2,6 +2,7 @@ package aeza.hostmaster.mobile.data.remote
 
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
 import aeza.hostmaster.mobile.data.model.CheckResponseDto
+import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {

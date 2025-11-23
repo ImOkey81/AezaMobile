@@ -1,6 +1,7 @@
 package aeza.hostmaster.mobile.data.repository
 
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
+import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
