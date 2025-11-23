@@ -7,7 +7,7 @@ import aeza.hostmaster.mobile.data.mapper.CheckMapper
 import aeza.hostmaster.mobile.domain.model.CheckResult
 import aeza.hostmaster.mobile.domain.model.CheckType
 import aeza.hostmaster.mobile.domain.model.isTerminal
-import aeza.hostmaster.mobile.domain.usecase.GetCheckStatusUseCase
+import aeza.hostmaster.mobile.domain.usecase.GetCheckResultUseCase
 import aeza.hostmaster.mobile.domain.usecase.SubmitCheckUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Locale
@@ -33,7 +33,7 @@ data class CheckUiState(
 @HiltViewModel
 class CheckViewModel @Inject constructor(
     private val submitCheck: SubmitCheckUseCase,
-    private val getCheckStatus: GetCheckStatusUseCase,
+    private val getCheckResult: GetCheckResultUseCase,
     private val mapper: CheckMapper
 ) : ViewModel() {
 
@@ -151,17 +151,17 @@ class CheckViewModel @Inject constructor(
         return "$host:$port"
     }
 
-    private suspend fun waitForCompletion(checkId: String, type: CheckType): CheckResult {
+    private suspend fun waitForCompletion(jobId: String, type: CheckType): CheckResult {
         repeat(POLL_ATTEMPTS) { attempt ->
-            val statusResponse = getCheckStatus(checkId)
-            val result = mapper.toDomain(statusResponse, type)
+            val resultResponse = getCheckResult(jobId)
+            val result = mapper.toDomain(resultResponse, type)
             if (result.isTerminal() || attempt == POLL_ATTEMPTS - 1) {
                 return result
             }
             delay(POLL_DELAY_MILLIS)
         }
         // Should not reach here because of return inside loop, but keep compiler happy
-        val fallbackResponse = getCheckStatus(checkId)
+        val fallbackResponse = getCheckResult(jobId)
         return mapper.toDomain(fallbackResponse, type)
     }
 

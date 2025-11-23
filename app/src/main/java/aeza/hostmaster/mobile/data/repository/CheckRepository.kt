@@ -1,6 +1,7 @@
 package aeza.hostmaster.mobile.data.repository
 
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
+import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
@@ -24,8 +25,14 @@ class CheckRepository @Inject constructor(
         )
     }
 
-    suspend fun getStatus(checkId: String) = executeWithErrorHandling {
-        api.getCheckStatus(checkId)
+    suspend fun getResult(jobId: String) = executeWithErrorHandling {
+        val response = api.getCheckResult(jobId)
+        when {
+            response.isSuccessful -> response.body()
+                ?: CheckResponseDto(jobId = jobId, status = "pending")
+            response.code() == 202 -> CheckResponseDto(jobId = jobId, status = "pending")
+            else -> throw HttpException(response)
+        }
     }
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {
