@@ -16,7 +16,7 @@ import retrofit2.HttpException
 class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
-    suspend fun submitCheck(target: String, type: CheckType) = executeWithErrorHandling {
+    suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
         api.submitCheck(
             CheckRequestDto(
                 target = target,
@@ -25,8 +25,8 @@ class CheckRepository @Inject constructor(
         )
     }
 
-    suspend fun getResult(jobId: String) = executeWithErrorHandling {
-        api.getCheckResult(jobId)
+    suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
+        api.getResult(jobId)
     }
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {
