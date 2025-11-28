@@ -18,7 +18,7 @@ private val localProperties: Properties = Properties().apply {
     }
 }
 
-private val apiBaseUrl = localProperties.getProperty("api.baseUrl", "http://10.0.2.2:8080/api/")
+private val apiBaseUrl = localProperties.getProperty("api.baseUrl", "https://check-host.net/")
 private val apiUsername = localProperties.getProperty("api.username", "siderea_78")
 private val apiPassword = localProperties.getProperty("api.password", "sidereaGISART_78")
 android {

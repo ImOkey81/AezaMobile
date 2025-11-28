@@ -1,11 +1,11 @@
 package aeza.hostmaster.mobile.data.repository
 
-import aeza.hostmaster.mobile.data.model.CheckRequestDto
+import aeza.hostmaster.mobile.data.model.CheckHostResultDto
+import aeza.hostmaster.mobile.data.model.CheckHostStartResponseDto
 import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
-import java.util.Locale
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import okhttp3.ResponseBody
@@ -17,16 +17,44 @@ class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
-        api.submitCheck(
-            CheckRequestDto(
-                target = target,
-                checkTypes = listOf(type.backendName.uppercase(Locale.ROOT))
-            )
+        val startResponse = when (type) {
+            is CheckType.Ping -> api.startPing(target)
+            is CheckType.Http -> api.startHttp(target)
+            is CheckType.Tcp -> api.startTcp(target)
+            is CheckType.Dns -> api.startDns(target)
+            is CheckType.Info -> throw IllegalArgumentException("Info check is not supported by Check-Host API")
+        }
+
+        validateStartResponse(startResponse)
+
+        CheckResponseDto(
+            jobId = startResponse.requestId ?: "",
+            status = startResponse.statusLabel(),
+            type = type.backendName,
+            target = target,
+            payload = null,
+            results = null,
+            createdAt = null,
+            updatedAt = null,
+            context = null
         )
     }
 
     suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
-        api.getCheckResult(jobId)
+        val resultDto = api.fetchResult(jobId)
+        validateResultResponse(resultDto)
+
+        CheckResponseDto(
+            jobId = jobId,
+            status = resultDto.statusLabel(),
+            type = null,
+            target = null,
+            results = resultDto.result,
+            payload = null,
+            createdAt = null,
+            updatedAt = null,
+            context = null
+        )
     }
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {
@@ -58,6 +86,34 @@ class CheckRepository @Inject constructor(
             )
 
             else -> Exception(error.message ?: "Не удалось выполнить запрос", error)
+        }
+    }
+
+    private fun validateStartResponse(response: CheckHostStartResponseDto) {
+        if (response.ok != 1 || response.requestId.isNullOrBlank()) {
+            val message = response.error?.takeIf { it.isNotBlank() }
+                ?: "Не удалось запустить проверку. Попробуйте позже."
+            throw Exception(message)
+        }
+    }
+
+    private fun validateResultResponse(response: CheckHostResultDto) {
+        if (response.ok == 1) return
+        val message = response.error?.takeIf { it.isNotBlank() }
+            ?: "Не удалось получить результат проверки"
+        throw Exception(message)
+    }
+
+    private fun CheckHostStartResponseDto.statusLabel(): String =
+        if (ok == 1) "pending" else "error"
+
+    private fun CheckHostResultDto.statusLabel(): String {
+        val stateLabel = state ?: status
+        return when {
+            result != null -> "done"
+            !stateLabel.isNullOrBlank() -> stateLabel
+            ok == 1 -> "processing"
+            else -> "error"
         }
     }
 
