@@ -1,15 +1,25 @@
 package aeza.hostmaster.mobile.data.remote
 
-import aeza.hostmaster.mobile.data.model.CheckRequestDto
-import aeza.hostmaster.mobile.data.model.CheckResponseDto
-import retrofit2.Response
-import retrofit2.http.*
+import aeza.hostmaster.mobile.data.model.CheckHostResultDto
+import aeza.hostmaster.mobile.data.model.CheckHostStartResponseDto
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
 
-    @POST("checks")
-    suspend fun submitCheck(@Body request: CheckRequestDto): CheckResponseDto
+    @GET("check-ping")
+    suspend fun startPing(@Query("host") host: String): CheckHostStartResponseDto
 
-    @GET("checks/{jobId}/result")
-    suspend fun getResult(@Path("jobId") jobId: String): CheckResponseDto
+    @GET("check-http")
+    suspend fun startHttp(@Query("host") host: String): CheckHostStartResponseDto
+
+    @GET("check-tcp")
+    suspend fun startTcp(@Query("host") host: String): CheckHostStartResponseDto
+
+    @GET("check-dns")
+    suspend fun startDns(@Query("host") host: String): CheckHostStartResponseDto
+
+    @GET("check-result/{requestId}")
+    suspend fun fetchResult(@Path("requestId") requestId: String): CheckHostResultDto
 }
