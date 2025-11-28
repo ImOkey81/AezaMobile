@@ -22,6 +22,8 @@ private const val DEFAULT_BASE_URL = "https://check-host.net/"
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    private const val DEFAULT_USER_AGENT = "curl/8.4.0"
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
@@ -45,6 +47,14 @@ object NetworkModule {
                         .build()
                     chain.proceed(request)
                 }
+            }
+            addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("Accept", "application/json")
+                    .header("User-Agent", DEFAULT_USER_AGENT)
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .build()
+                chain.proceed(request)
             }
         }
         .build()
