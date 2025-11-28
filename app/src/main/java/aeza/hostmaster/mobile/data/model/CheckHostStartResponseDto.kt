@@ -9,4 +9,5 @@ data class CheckHostStartResponseDto(
     val requestId: String? = null,
     @SerializedName("permanent_link")
     val permanentLink: String? = null,
+    val nodes: com.google.gson.JsonElement? = null,
 )

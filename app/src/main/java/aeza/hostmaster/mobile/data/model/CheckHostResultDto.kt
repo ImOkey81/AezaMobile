@@ -4,11 +4,11 @@ import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 
 data class CheckHostResultDto(
-    val ok: Int? = null,
-    val error: String? = null,
-    val state: String? = null,
-    val status: String? = null,
+    val command: String? = null,
+    val created: Long? = null,
+    val host: String? = null,
     @SerializedName("permanent_link")
     val permanentLink: String? = null,
-    val result: JsonElement? = null,
+    val results: JsonElement? = null,
+    val error: String? = null,
 )

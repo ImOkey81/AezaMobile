@@ -6,6 +6,7 @@ import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
+import java.time.Instant
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import okhttp3.ResponseBody
@@ -47,11 +48,11 @@ class CheckRepository @Inject constructor(
         CheckResponseDto(
             jobId = jobId,
             status = resultDto.statusLabel(),
-            type = null,
-            target = null,
-            results = resultDto.result,
+            type = resultDto.command,
+            target = resultDto.host,
+            results = resultDto.results,
             payload = null,
-            createdAt = null,
+            createdAt = resultDto.created.toIsoString(),
             updatedAt = null,
             context = null
         )
@@ -98,23 +99,26 @@ class CheckRepository @Inject constructor(
     }
 
     private fun validateResultResponse(response: CheckHostResultDto) {
-        if (response.ok == 1) return
         val message = response.error?.takeIf { it.isNotBlank() }
-            ?: "Не удалось получить результат проверки"
-        throw Exception(message)
+        if (message != null) throw Exception(message)
     }
 
     private fun CheckHostStartResponseDto.statusLabel(): String =
         if (ok == 1) "pending" else "error"
 
     private fun CheckHostResultDto.statusLabel(): String {
-        val stateLabel = state ?: status
-        return when {
-            result != null -> "done"
-            !stateLabel.isNullOrBlank() -> stateLabel
-            ok == 1 -> "processing"
-            else -> "error"
+        if (!error.isNullOrBlank()) return "error"
+        val resultElement = results
+        if (resultElement == null || resultElement.isJsonNull) return "processing"
+
+        if (resultElement.isJsonObject) {
+            val hasPendingNodes = resultElement.asJsonObject.entrySet().any { (_, value) ->
+                value.isJsonNull
+            }
+            if (hasPendingNodes) return "processing"
         }
+
+        return "done"
     }
 
     private fun parseErrorMessage(body: ResponseBody?): String? {
@@ -145,4 +149,6 @@ class CheckRepository @Inject constructor(
             null
         }
     }
+
+    private fun Long?.toIsoString(): String? = this?.let { Instant.ofEpochSecond(it).toString() }
 }
