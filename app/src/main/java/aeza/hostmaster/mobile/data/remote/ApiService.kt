@@ -2,6 +2,7 @@ package aeza.hostmaster.mobile.data.remote
 
 import aeza.hostmaster.mobile.data.model.CheckHostResultDto
 import aeza.hostmaster.mobile.data.model.CheckHostStartResponseDto
+import com.google.gson.JsonElement
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Path
@@ -28,4 +29,8 @@ interface ApiService {
     @Headers("Accept: application/json")
     @GET("check-result-extended/{requestId}")
     suspend fun fetchResult(@Path("requestId") requestId: String): CheckHostResultDto
+
+    @Headers("Accept: application/json")
+    @GET("check-result/{requestId}")
+    suspend fun fetchLegacyResult(@Path("requestId") requestId: String): JsonElement
 }

@@ -5,6 +5,7 @@ import aeza.hostmaster.mobile.data.model.CheckHostStartResponseDto
 import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
 import aeza.hostmaster.mobile.domain.model.CheckType
+import com.google.gson.JsonElement
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
@@ -42,17 +43,25 @@ class CheckRepository @Inject constructor(
     }
 
     suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
-        val resultDto = api.fetchResult(jobId)
-        validateResultResponse(resultDto)
+        val extendedResult = api.fetchResult(jobId)
+        val completedResult = if (extendedResult.results.isNullOrMissing()) {
+            val legacyResults = api.fetchLegacyResult(jobId)
+            parseLegacyError(legacyResults)?.let { throw Exception(it) }
+            extendedResult.copy(results = legacyResults)
+        } else {
+            extendedResult
+        }
+
+        validateResultResponse(completedResult)
 
         CheckResponseDto(
             jobId = jobId,
-            status = resultDto.statusLabel(),
-            type = resultDto.command,
-            target = resultDto.host,
-            results = resultDto.results,
+            status = completedResult.statusLabel(),
+            type = completedResult.command,
+            target = completedResult.host,
+            results = completedResult.results,
             payload = null,
-            createdAt = resultDto.created.toIsoString(),
+            createdAt = completedResult.created.toIsoString(),
             updatedAt = null,
             context = null
         )
@@ -151,4 +160,16 @@ class CheckRepository @Inject constructor(
     }
 
     private fun Long?.toIsoString(): String? = this?.let { Instant.ofEpochSecond(it).toString() }
+
+    private fun JsonElement?.isNullOrMissing(): Boolean = this == null || this.isJsonNull
+
+    private fun parseLegacyError(result: JsonElement): String? {
+        if (!result.isJsonObject) return null
+        val obj = result.asJsonObject
+        return when {
+            obj.has("error") -> obj.get("error")?.takeIf { it.isJsonPrimitive }?.asString
+            obj.has("reason") -> obj.get("reason")?.takeIf { it.isJsonPrimitive }?.asString
+            else -> null
+        }
+    }
 }
