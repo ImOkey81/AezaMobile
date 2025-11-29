@@ -68,10 +68,17 @@ class CheckViewModel @Inject constructor(
                     )
                 }
             }.onFailure { throwable ->
-                _state.update {
-                    it.copy(
+                val error = throwable.message ?: "Не удалось выполнить проверку"
+                _state.update { current ->
+                    val updatedHistory = current.activeJobId
+                        ?.let { jobId -> current.history.markAsFailed(jobId, error) }
+                        ?: current.history
+
+                    current.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: "Не удалось выполнить проверку"
+                        activeJobId = null,
+                        history = updatedHistory,
+                        errorMessage = error
                     )
                 }
             }
@@ -186,6 +193,20 @@ class CheckViewModel @Inject constructor(
             }
         } else {
             mutable.add(0, result)
+        }
+        return mutable
+    }
+
+    private fun List<CheckResult>.markAsFailed(jobId: String, message: String): List<CheckResult> {
+        val mutable = toMutableList()
+        val index = indexOfFirst { it.jobId == jobId }
+        if (index >= 0) {
+            val failed = mutable[index].copy(status = "failed", details = message)
+            mutable[index] = failed
+            if (index != 0) {
+                mutable.removeAt(index)
+                mutable.add(0, failed)
+            }
         }
         return mutable
     }
