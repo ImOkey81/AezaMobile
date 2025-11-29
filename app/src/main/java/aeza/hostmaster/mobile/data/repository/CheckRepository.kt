@@ -15,15 +15,17 @@ import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.HttpException
 
+private const val DEFAULT_MAX_NODES = 5
+
 class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
         val startResponse = when (type) {
-            is CheckType.Ping -> api.startPing(target)
-            is CheckType.Http -> api.startHttp(target)
-            is CheckType.Tcp -> api.startTcp(target)
-            is CheckType.Dns -> api.startDns(target)
+            is CheckType.Ping -> api.startPing(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Http -> api.startHttp(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Tcp -> api.startTcp(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Dns -> api.startDns(target, DEFAULT_MAX_NODES, null)
             is CheckType.Info -> throw IllegalArgumentException("Info check is not supported by Check-Host API")
         }
 
