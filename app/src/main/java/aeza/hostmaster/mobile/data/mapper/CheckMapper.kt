@@ -154,59 +154,64 @@ class CheckMapper @Inject constructor(
         return formatLegacyPingDetails(element)
     }
 
-    private fun formatHttpDetails(element: JsonElement): String? {
-        val source = when {
-            element.isJsonObject && element.asJsonObject.has("results") -> element.asJsonObject.get("results")
-            element.isJsonObject && element.asJsonObject.has("http") -> element.asJsonObject.get("http")
-            else -> element
-        } ?: return null
+    private fun formatLegacyPingDetails(element: JsonElement): String? {
+        if (!element.isJsonObject) return null
 
-        if (!source.isJsonObject) return null
-
-        val nodes = source.asJsonObject.entrySet()
+        val lines = StringBuilder()
+        val nodes = element.asJsonObject.entrySet().filter { (_, value) -> value != null && !value.isJsonNull }
         if (nodes.isEmpty()) return null
 
-        val summary = StringBuilder()
-        val pendingNodes = mutableListOf<String>()
-
         nodes.forEachIndexed { index, (nodeName, value) ->
-            if (value == null || value.isJsonNull) {
-                pendingNodes.add(nodeName)
-                return@forEachIndexed
-            }
-
             if (!value.isJsonArray) return@forEachIndexed
 
-            val attempts = mutableListOf<HttpAttempt>()
+            val attempts = mutableListOf<JsonArray>()
             value.asJsonArray.forEach { outer ->
                 if (outer.isJsonArray) {
                     outer.asJsonArray.forEach { inner ->
-                        if (inner.isJsonArray) {
-                            val attempt = parseHttpAttempt(inner.asJsonArray)
-                            if (attempt != null) attempts.add(attempt)
-                        }
+                        if (inner.isJsonArray) attempts.add(inner.asJsonArray)
                     }
                 }
             }
 
             if (attempts.isEmpty()) return@forEachIndexed
 
-            val preferredAttempt = attempts.firstOrNull { it.ok == true } ?: attempts.first()
+            var ip: String? = null
+            var successCount = 0
+            val times = mutableListOf<Double>()
 
-            summary.appendLine(nodeName)
+            attempts.forEach { attempt ->
+                val status = attempt.readString(0)
+                val timeSeconds = attempt.readDouble(1)
+                val attemptIp = attempt.readString(2)
+                if (ip == null && !attemptIp.isNullOrBlank()) ip = attemptIp
 
-            preferredAttempt.statusLabel()?.let { summary.appendLine("Статус: $it") }
-            preferredAttempt.latencyMs?.let { summary.appendLine("Время: ${formatMillis(it)} мс") }
-            preferredAttempt.ip?.takeIf { it.isNotBlank() }?.let { summary.appendLine("IP: $it") }
+                if (status.equals("OK", ignoreCase = true)) {
+                    successCount++
+                    timeSeconds?.let { times.add(it) }
+                }
+            }
 
-            if (index < nodes.size - 1) summary.appendLine()
+            val total = attempts.size
+            val failed = total - successCount
+            val avgMs = times.takeIf { it.isNotEmpty() }?.average()?.times(1000)
+
+            lines.appendLine(nodeName)
+            ip?.let { lines.appendLine("IP: $it") }
+            lines.appendLine("Успешно: $successCount из $total${if (failed > 0) " (ошибок $failed)" else ""}")
+            avgMs?.let { lines.appendLine("Среднее время: ${formatMillis(it)} мс") }
+
+            if (index < nodes.size - 1) lines.appendLine()
         }
 
-        if (pendingNodes.isNotEmpty()) {
-            summary.appendLine("Ожидание ответа: ${pendingNodes.joinToString(", ")}")
-        }
+        return lines.toString().trim().takeIf { it.isNotEmpty() }
+    }
 
-        return summary.toString().trim().takeIf { it.isNotEmpty() }
+    private fun formatMillis(value: Double): String {
+        return if (value >= 100) {
+            String.format(Locale.getDefault(), "%.0f", value)
+        } else {
+            String.format(Locale.getDefault(), "%.1f", value)
+        }
     }
 
     private fun formatLegacyPingDetails(element: JsonElement): String? {
@@ -325,33 +330,6 @@ class CheckMapper @Inject constructor(
             primitive.isNumber -> primitive.asNumber.toDouble()
             primitive.isString -> primitive.asString.toDoubleOrNull()
             else -> null
-        }
-    }
-
-    private data class HttpAttempt(
-        val ok: Boolean?,
-        val latencyMs: Double?,
-        val message: String?,
-        val code: String?,
-        val ip: String?
-    ) {
-        fun statusLabel(): String? {
-            val status = when (ok) {
-                true -> "OK"
-                false -> "Ошибка"
-                else -> null
-            }
-            val details = listOfNotNull(
-                code?.takeIf { it.isNotBlank() }?.let { "код $it" },
-                message?.takeIf { it.isNotBlank() }
-            )
-            val suffix = details.takeIf { it.isNotEmpty() }?.joinToString(", ")
-            return when {
-                status != null && suffix != null -> "$status — $suffix"
-                status != null -> status
-                suffix != null -> suffix
-                else -> null
-            }
         }
     }
 }
