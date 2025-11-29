@@ -15,15 +15,17 @@ import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.HttpException
 
+private const val DEFAULT_MAX_NODES = 5
+
 class CheckRepository @Inject constructor(
     private val api: ApiService
 ) {
     suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
         val startResponse = when (type) {
-            is CheckType.Ping -> api.startPing(target)
-            is CheckType.Http -> api.startHttp(target)
-            is CheckType.Tcp -> api.startTcp(target)
-            is CheckType.Dns -> api.startDns(target)
+            is CheckType.Ping -> api.startPing(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Http -> api.startHttp(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Tcp -> api.startTcp(target, DEFAULT_MAX_NODES, null)
+            is CheckType.Dns -> api.startDns(target, DEFAULT_MAX_NODES, null)
             is CheckType.Info -> throw IllegalArgumentException("Info check is not supported by Check-Host API")
         }
 
@@ -44,7 +46,7 @@ class CheckRepository @Inject constructor(
 
     suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
         val extendedResult = api.fetchResult(jobId)
-        val completedResult = if (extendedResult.results.isNullOrMissing()) {
+        val completedResult = if (extendedResult.results.isNullMissingOrOnlyNullNodes()) {
             val legacyResults = api.fetchLegacyResult(jobId)
             parseLegacyError(legacyResults)?.let { throw Exception(it) }
             extendedResult.copy(results = legacyResults)
@@ -161,7 +163,16 @@ class CheckRepository @Inject constructor(
 
     private fun Long?.toIsoString(): String? = this?.let { Instant.ofEpochSecond(it).toString() }
 
-    private fun JsonElement?.isNullOrMissing(): Boolean = this == null || this.isJsonNull
+    private fun JsonElement?.isNullMissingOrOnlyNullNodes(): Boolean {
+        if (this == null || this.isJsonNull) return true
+        if (!this.isJsonObject) return false
+
+        val entries = this.asJsonObject.entrySet()
+        if (entries.isEmpty()) return true
+
+        val hasAnyValue = entries.any { (_, value) -> value != null && !value.isJsonNull }
+        return !hasAnyValue
+    }
 
     private fun parseLegacyError(result: JsonElement): String? {
         if (!result.isJsonObject) return null

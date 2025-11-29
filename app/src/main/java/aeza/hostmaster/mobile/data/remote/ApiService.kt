@@ -12,19 +12,35 @@ interface ApiService {
 
     @Headers("Accept: application/json")
     @GET("check-ping")
-    suspend fun startPing(@Query("host") host: String): CheckHostStartResponseDto
+    suspend fun startPing(
+        @Query("host") host: String,
+        @Query("max_nodes") maxNodes: Int?,
+        @Query("node") nodes: List<String>?
+    ): CheckHostStartResponseDto
 
     @Headers("Accept: application/json")
     @GET("check-http")
-    suspend fun startHttp(@Query("host") host: String): CheckHostStartResponseDto
+    suspend fun startHttp(
+        @Query("host") host: String,
+        @Query("max_nodes") maxNodes: Int?,
+        @Query("node") nodes: List<String>?
+    ): CheckHostStartResponseDto
 
     @Headers("Accept: application/json")
     @GET("check-tcp")
-    suspend fun startTcp(@Query("host") host: String): CheckHostStartResponseDto
+    suspend fun startTcp(
+        @Query("host") host: String,
+        @Query("max_nodes") maxNodes: Int?,
+        @Query("node") nodes: List<String>?
+    ): CheckHostStartResponseDto
 
     @Headers("Accept: application/json")
     @GET("check-dns")
-    suspend fun startDns(@Query("host") host: String): CheckHostStartResponseDto
+    suspend fun startDns(
+        @Query("host") host: String,
+        @Query("max_nodes") maxNodes: Int?,
+        @Query("node") nodes: List<String>?
+    ): CheckHostStartResponseDto
 
     @Headers("Accept: application/json")
     @GET("check-result-extended/{requestId}")
