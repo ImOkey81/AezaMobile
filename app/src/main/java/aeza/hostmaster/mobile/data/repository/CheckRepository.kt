@@ -121,10 +121,10 @@ class CheckRepository @Inject constructor(
         if (resultElement == null || resultElement.isJsonNull) return "processing"
 
         if (resultElement.isJsonObject) {
-            val hasPendingNodes = resultElement.asJsonObject.entrySet().any { (_, value) ->
-                value.isJsonNull
-            }
-            if (hasPendingNodes) return "processing"
+            val entries = resultElement.asJsonObject.entrySet()
+            val hasAnyCompletedNode = entries.any { (_, value) -> !value.isJsonNull }
+            if (hasAnyCompletedNode) return "done"
+            if (entries.isNotEmpty()) return "processing"
         }
 
         return "done"
