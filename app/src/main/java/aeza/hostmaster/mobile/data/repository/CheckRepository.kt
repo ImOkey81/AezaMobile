@@ -46,7 +46,7 @@ class CheckRepository @Inject constructor(
 
     suspend fun getResult(jobId: String): CheckResponseDto = executeWithErrorHandling {
         val extendedResult = api.fetchResult(jobId)
-        val completedResult = if (extendedResult.results.isNullOrMissing()) {
+        val completedResult = if (extendedResult.results.isNullMissingOrOnlyNullNodes()) {
             val legacyResults = api.fetchLegacyResult(jobId)
             parseLegacyError(legacyResults)?.let { throw Exception(it) }
             extendedResult.copy(results = legacyResults)
@@ -163,7 +163,16 @@ class CheckRepository @Inject constructor(
 
     private fun Long?.toIsoString(): String? = this?.let { Instant.ofEpochSecond(it).toString() }
 
-    private fun JsonElement?.isNullOrMissing(): Boolean = this == null || this.isJsonNull
+    private fun JsonElement?.isNullMissingOrOnlyNullNodes(): Boolean {
+        if (this == null || this.isJsonNull) return true
+        if (!this.isJsonObject) return false
+
+        val entries = this.asJsonObject.entrySet()
+        if (entries.isEmpty()) return true
+
+        val hasAnyValue = entries.any { (_, value) -> value != null && !value.isJsonNull }
+        return !hasAnyValue
+    }
 
     private fun parseLegacyError(result: JsonElement): String? {
         if (!result.isJsonObject) return null
