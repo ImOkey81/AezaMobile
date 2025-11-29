@@ -296,6 +296,119 @@ class CheckMapper @Inject constructor(
         }
     }
 
+    private fun formatLegacyPingDetails(element: JsonElement): String? {
+        if (!element.isJsonObject) return null
+
+        val lines = StringBuilder()
+        val nodes = element.asJsonObject.entrySet().filter { (_, value) -> value != null && !value.isJsonNull }
+        if (nodes.isEmpty()) return null
+
+        nodes.forEachIndexed { index, (nodeName, value) ->
+            if (!value.isJsonArray) return@forEachIndexed
+
+            val attempts = mutableListOf<JsonArray>()
+            value.asJsonArray.forEach { outer ->
+                if (outer.isJsonArray) {
+                    outer.asJsonArray.forEach { inner ->
+                        if (inner.isJsonArray) attempts.add(inner.asJsonArray)
+                    }
+                }
+            }
+
+            if (attempts.isEmpty()) return@forEachIndexed
+
+            var ip: String? = null
+            var successCount = 0
+            val times = mutableListOf<Double>()
+
+            attempts.forEach { attempt ->
+                val status = attempt.readString(0)
+                val timeSeconds = attempt.readDouble(1)
+                val attemptIp = attempt.readString(2)
+                if (ip == null && !attemptIp.isNullOrBlank()) ip = attemptIp
+
+                if (status.equals("OK", ignoreCase = true)) {
+                    successCount++
+                    timeSeconds?.let { times.add(it) }
+                }
+            }
+
+            val total = attempts.size
+            val failed = total - successCount
+            val avgMs = times.takeIf { it.isNotEmpty() }?.average()?.times(1000)
+
+            lines.appendLine(nodeName)
+            ip?.let { lines.appendLine("IP: $it") }
+            lines.appendLine("Успешно: $successCount из $total${if (failed > 0) " (ошибок $failed)" else ""}")
+            avgMs?.let { lines.appendLine("Среднее время: ${formatMillis(it)} мс") }
+
+            if (index < nodes.size - 1) lines.appendLine()
+        }
+
+        return lines.toString().trim().takeIf { it.isNotEmpty() }
+    }
+
+    private fun formatMillis(value: Double): String {
+        return if (value >= 100) {
+            String.format(Locale.getDefault(), "%.0f", value)
+        } else {
+            String.format(Locale.getDefault(), "%.1f", value)
+        }
+    }
+
+    private fun extractHttpAttempts(nodeValue: JsonArray): List<HttpAttempt> {
+        val attempts = mutableListOf<HttpAttempt>()
+
+        nodeValue.forEach { candidate ->
+            if (!candidate.isJsonArray) return@forEach
+
+            val array = candidate.asJsonArray
+
+            // handle array-of-array payloads
+            var consumedNested = false
+            array.forEach { nested ->
+                if (nested.isJsonArray) {
+                    parseHttpAttempt(nested.asJsonArray)?.let { attempts.add(it) }
+                    consumedNested = true
+                }
+            }
+
+            // handle single attempt arrays like [1, 0.44, "OK", "200", "ip"]
+            if (!consumedNested) {
+                parseHttpAttempt(array)?.let { attempts.add(it) }
+            }
+        }
+
+        // some responses return the attempt without an extra wrapper array
+        if (attempts.isEmpty()) {
+            parseHttpAttempt(nodeValue)?.let { attempts.add(it) }
+        }
+
+        return attempts
+    }
+
+    private fun parseHttpAttempt(array: JsonArray): HttpAttempt? {
+        val ok = array.readBooleanLike(0)
+        val latencyMs = array.readDouble(1)?.times(1000)
+        val message = array.readString(2)
+        val code = array.readString(3)
+        val ip = array.readString(4)
+
+        if (ok == null && latencyMs == null && message == null && code == null && ip == null) return null
+
+        return HttpAttempt(ok, latencyMs, message, code, ip)
+    }
+
+    private fun JsonArray.readBooleanLike(index: Int): Boolean? {
+        val primitive = getPrimitive(index) ?: return null
+        return when {
+            primitive.isBoolean -> primitive.asBoolean
+            primitive.isNumber -> primitive.asNumber.toInt() != 0
+            primitive.isString -> primitive.asString.equals("ok", ignoreCase = true) || primitive.asString == "1"
+            else -> null
+        }
+    }
+
     private fun JsonObject.readPrimitive(key: String): String? {
         val element = get(key) ?: return null
         if (!element.isJsonPrimitive || element.isJsonNull) return null
