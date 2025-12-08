@@ -16,7 +16,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val DEFAULT_BASE_URL = "https://check-host.net/"
+private const val DEFAULT_BASE_URL = "http://10.0.2.2:8080/"
+private const val LEGACY_CHECK_HOST = "check-host.net"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -82,5 +83,12 @@ object NetworkModule {
 
 private fun resolveBaseUrl(): String {
     val configured = BuildConfig.API_BASE_URL.ifBlank { DEFAULT_BASE_URL }
+    if (configured.contains(LEGACY_CHECK_HOST, ignoreCase = true)) {
+        Log.w(
+            "NetworkModule",
+            "Ignoring legacy check-host base URL. Falling back to $DEFAULT_BASE_URL"
+        )
+        return DEFAULT_BASE_URL
+    }
     return if (configured.endsWith("/")) configured else "$configured/"
 }
