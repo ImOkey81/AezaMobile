@@ -82,8 +82,6 @@ object NetworkModule {
 }
 
 private fun resolveBaseUrl(): String {
-    val configured = BuildConfig.API_BASE_URL
-        .takeUnless { it.contains(LEGACY_CHECK_HOST, ignoreCase = true) }
-        .ifBlank { DEFAULT_BASE_URL }
+    val configured = BuildConfig.API_BASE_URL.ifBlank { DEFAULT_BASE_URL }
     return if (configured.endsWith("/")) configured else "$configured/"
 }
