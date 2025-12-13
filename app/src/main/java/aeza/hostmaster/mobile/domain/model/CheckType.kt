@@ -33,7 +33,7 @@ sealed class CheckType(
 
     object Dns : CheckType(
         route = "dns",
-        backendName = "DNS",
+        backendName = "DNS_LOOKUP",
         title = "DNS",
         description = "Получение DNS-записей домена.",
         inputHint = "example.com"
@@ -41,7 +41,7 @@ sealed class CheckType(
 
     object Info : CheckType(
         route = "info",
-        backendName = "LOOKUP",
+        backendName = "TRACEROUTE",
         title = "Info",
         description = "Сбор общей информации о хостинге или домене.",
         inputHint = "example.com"
@@ -63,8 +63,8 @@ sealed class CheckType(
                 Ping.backendName -> Ping
                 Http.backendName -> Http
                 Tcp.backendName, "TCP" -> Tcp
-                Dns.backendName, "DNS_LOOKUP" -> Dns
-                Info.backendName, "TRACEROUTE", "INFO" -> Info
+                Dns.backendName, "DNS" -> Dns
+                Info.backendName, "INFO" -> Info
                 else -> null
             }
         }
