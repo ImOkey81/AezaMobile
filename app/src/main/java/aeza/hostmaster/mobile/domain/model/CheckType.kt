@@ -9,7 +9,7 @@ sealed class CheckType(
 ) {
     object Ping : CheckType(
         route = "ping",
-        backendName = "ping",
+        backendName = "PING",
         title = "Ping",
         description = "Проверка доступности сервера и времени отклика.",
         inputHint = "example.com"
@@ -17,7 +17,7 @@ sealed class CheckType(
 
     object Http : CheckType(
         route = "http",
-        backendName = "http",
+        backendName = "HTTP",
         title = "HTTP",
         description = "Запрос к HTTP/HTTPS ресурсу и проверка кода ответа.",
         inputHint = "https://example.com"
@@ -25,7 +25,7 @@ sealed class CheckType(
 
     object Tcp : CheckType(
         route = "tcp",
-        backendName = "tcp",
+        backendName = "TCP_CONNECT",
         title = "TCP",
         description = "Проверка доступности TCP-порта.",
         inputHint = "example.com:22"
@@ -33,7 +33,7 @@ sealed class CheckType(
 
     object Dns : CheckType(
         route = "dns",
-        backendName = "dns",
+        backendName = "DNS",
         title = "DNS",
         description = "Получение DNS-записей домена.",
         inputHint = "example.com"
@@ -41,7 +41,7 @@ sealed class CheckType(
 
     object Info : CheckType(
         route = "info",
-        backendName = "info",
+        backendName = "LOOKUP",
         title = "Info",
         description = "Сбор общей информации о хостинге или домене.",
         inputHint = "example.com"
@@ -53,7 +53,20 @@ sealed class CheckType(
         fun fromRoute(route: String?): CheckType? =
             items.firstOrNull { it.route == route }
 
-        fun fromBackendName(name: String?): CheckType? =
-            items.firstOrNull { it.backendName.equals(name, ignoreCase = true) }
+        fun fromBackendName(name: String?): CheckType? {
+            val normalized = name
+                ?.replace('-', '_')
+                ?.uppercase()
+                ?: return null
+
+            return when (normalized) {
+                Ping.backendName -> Ping
+                Http.backendName -> Http
+                Tcp.backendName, "TCP" -> Tcp
+                Dns.backendName, "DNS_LOOKUP" -> Dns
+                Info.backendName, "TRACEROUTE", "INFO" -> Info
+                else -> null
+            }
+        }
     }
 }

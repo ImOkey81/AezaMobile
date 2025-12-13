@@ -18,9 +18,9 @@ private val localProperties: Properties = Properties().apply {
     }
 }
 
-private val apiBaseUrl = localProperties.getProperty("api.baseUrl", "http://10.0.2.2:8080/")
-private val apiUsername = localProperties.getProperty("api.username", "")
-private val apiPassword = localProperties.getProperty("api.password", "")
+private val apiBaseUrl = localProperties.getProperty("api.baseUrl", "http://91.107.126.43:8080/")
+private val apiUsername = localProperties.getProperty("api.username", "siderea_78&&")
+private val apiPassword = localProperties.getProperty("api.password", "sidereaGISART_78&&")
 android {
     namespace = "aeza.hostmaster.mobile"
     compileSdk = 36
