@@ -67,7 +67,7 @@ class CheckRepository @Inject constructor(
     }
 
     private fun validateJobResponse(response: CheckResponseDto) {
-        if (response.jobId.isBlank()) {
+        if (response.jobId.isNullOrBlank()) {
             val message = response.status.takeIf { it.isNotBlank() }
                 ?: "Не удалось запустить проверку. Попробуйте позже."
             throw Exception(message)

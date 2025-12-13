@@ -9,7 +9,7 @@ import java.util.TimeZone
 
 data class CheckResponseDto(
     @SerializedName(value = "jobId", alternate = ["job_id"])
-    val jobId: String,
+    val jobId: String? = null,
     @SerializedName(value = "status", alternate = ["state"])
     val status: String,
     @SerializedName(value = "type", alternate = ["check_type"])
