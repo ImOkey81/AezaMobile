@@ -178,40 +178,37 @@ class CheckMapper @Inject constructor(
         }
     }
 
-    private fun formatLegacyPingDetails(element: JsonElement): String? {
-        if (!element.isJsonObject) return null
+    private fun extractHttpAttempts(element: JsonElement): List<HttpAttempt> {
+        val attempts = mutableListOf<HttpAttempt>()
 
-        val lines = StringBuilder()
-        val nodes = element.asJsonObject.entrySet().filter { (_, value) -> value != null && !value.isJsonNull }
-        if (nodes.isEmpty()) return null
+        when {
+            element.isJsonArray -> {
+                val array = element.asJsonArray
 
-        nodes.forEachIndexed { index, (nodeName, value) ->
-            if (!value.isJsonArray) return@forEachIndexed
+                array.forEach { candidate ->
+                    when {
+                        candidate.isJsonArray -> {
+                            val inner = candidate.asJsonArray
+                            var consumedNested = false
+                            inner.forEach { nested ->
+                                if (nested.isJsonArray) {
+                                    parseHttpAttempt(nested.asJsonArray)?.let { attempts.add(it) }
+                                    consumedNested = true
+                                }
+                            }
+                            if (!consumedNested) {
+                                parseHttpAttempt(inner)?.let { attempts.add(it) }
+                            }
+                        }
 
-            val attempts = mutableListOf<JsonArray>()
-            value.asJsonArray.forEach { outer ->
-                if (outer.isJsonArray) {
-                    outer.asJsonArray.forEach { inner ->
-                        if (inner.isJsonArray) attempts.add(inner.asJsonArray)
+                        candidate.isJsonObject -> {
+                            parseHttpAttempt(candidate.asJsonObject)?.let { attempts.add(it) }
+                        }
                     }
                 }
-            }
 
-            if (attempts.isEmpty()) return@forEachIndexed
-
-            var ip: String? = null
-            var successCount = 0
-            val times = mutableListOf<Double>()
-
-            attempts.forEach { attempt ->
-                val status = attempt.readString(0)
-                val timeSeconds = attempt.readDouble(1)
-                val attemptIp = attempt.readString(2)
-                if (ip == null && !attemptIp.isNullOrBlank()) ip = attemptIp
-
-                if (status.equals("OK", ignoreCase = true)) {
-                    successCount++
-                    timeSeconds?.let { times.add(it) }
+                if (attempts.isEmpty()) {
+                    parseHttpAttempt(array)?.let { attempts.add(it) }
                 }
             }
 
@@ -276,37 +273,19 @@ class CheckMapper @Inject constructor(
     private fun extractHttpAttempts(nodeValue: JsonArray): List<HttpAttempt> {
         val attempts = mutableListOf<HttpAttempt>()
 
-        nodeValue.forEach { candidate ->
-            if (!candidate.isJsonArray) return@forEach
+        val latencyMs = obj.readDurationMs("latencyMs")
+            ?: obj.readDurationMs("latency_ms")
+            ?: obj.readDurationMs("latency")
+            ?: obj.readDurationMs("duration")
+            ?: obj.readDurationMs("time")
 
-            val array = candidate.asJsonArray
+        val message = obj.readPrimitive("message")
+            ?: obj.readPrimitive("detail")
+            ?: obj.readPrimitive("error")
+            ?: obj.readPrimitive("status")
 
-            var consumedNested = false
-            array.forEach { nested ->
-                if (nested.isJsonArray) {
-                    parseHttpAttempt(nested.asJsonArray)?.let { attempts.add(it) }
-                    consumedNested = true
-                }
-            }
-
-            if (!consumedNested) {
-                parseHttpAttempt(array)?.let { attempts.add(it) }
-            }
-        }
-
-        if (attempts.isEmpty()) {
-            parseHttpAttempt(nodeValue)?.let { attempts.add(it) }
-        }
-
-        return attempts
-    }
-
-    private fun parseHttpAttempt(array: JsonArray): HttpAttempt? {
-        val ok = array.readBooleanLike(0)
-        val latencyMs = array.readDouble(1)?.times(1000)
-        val message = array.readString(2)
-        val code = array.readString(3)
-        val ip = array.readString(4)
+        val code = obj.readPrimitive("code") ?: obj.readPrimitive("statusCode")
+        val ip = obj.readPrimitive("ip") ?: obj.readPrimitive("address")
 
         if (ok == null && latencyMs == null && message == null && code == null && ip == null) return null
 
