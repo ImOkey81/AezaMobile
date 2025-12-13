@@ -14,7 +14,7 @@ import org.json.JSONObject
 import retrofit2.HttpException
 
 class CheckRepository @Inject constructor(
-    private val api: ApiService
+    private val api: ApiService,
 ) {
     suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
         val request = CheckRequestDto(

@@ -162,6 +162,7 @@ class CheckViewModel @Inject constructor(
         repeat(POLL_ATTEMPTS) { attempt ->
             val resultResponse = getCheckResult(jobId)
             val result = mapper.toDomain(resultResponse, type)
+            updateHistory(result)
             if (result.isTerminal() || attempt == POLL_ATTEMPTS - 1) {
                 return result
             }
