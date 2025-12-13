@@ -3,6 +3,7 @@ package aeza.hostmaster.mobile.di
 import android.util.Log
 import aeza.hostmaster.mobile.BuildConfig
 import aeza.hostmaster.mobile.data.remote.ApiService
+import aeza.hostmaster.mobile.data.remote.WebSocketClient
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -79,6 +80,10 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService =
         retrofit.create(ApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWebSocketClient(gson: Gson): WebSocketClient = WebSocketClient(gson)
 }
 
 private fun resolveBaseUrl(): String {

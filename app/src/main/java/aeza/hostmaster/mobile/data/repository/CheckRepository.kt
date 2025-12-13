@@ -3,6 +3,7 @@ package aeza.hostmaster.mobile.data.repository
 import aeza.hostmaster.mobile.data.model.CheckRequestDto
 import aeza.hostmaster.mobile.data.model.CheckResponseDto
 import aeza.hostmaster.mobile.data.remote.ApiService
+import aeza.hostmaster.mobile.data.remote.WebSocketClient
 import aeza.hostmaster.mobile.domain.model.CheckType
 import java.io.IOException
 import java.util.Locale
@@ -14,7 +15,8 @@ import org.json.JSONObject
 import retrofit2.HttpException
 
 class CheckRepository @Inject constructor(
-    private val api: ApiService
+    private val api: ApiService,
+    private val webSocketClient: WebSocketClient
 ) {
     suspend fun submitCheck(target: String, type: CheckType): CheckResponseDto = executeWithErrorHandling {
         val request = CheckRequestDto(
@@ -33,6 +35,8 @@ class CheckRepository @Inject constructor(
         validateJobResponse(response)
         response
     }
+
+    fun subscribeToJob(jobId: String) = webSocketClient.subscribeToJob(jobId)
 
     private suspend fun <T> executeWithErrorHandling(block: suspend () -> T): T {
         return try {

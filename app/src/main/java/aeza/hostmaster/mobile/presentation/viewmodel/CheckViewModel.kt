@@ -8,6 +8,7 @@ import aeza.hostmaster.mobile.domain.model.CheckResult
 import aeza.hostmaster.mobile.domain.model.CheckType
 import aeza.hostmaster.mobile.domain.model.isTerminal
 import aeza.hostmaster.mobile.domain.usecase.GetCheckResultUseCase
+import aeza.hostmaster.mobile.domain.usecase.ObserveJobUpdatesUseCase
 import aeza.hostmaster.mobile.domain.usecase.SubmitCheckUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Locale
@@ -15,12 +16,17 @@ import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val HISTORY_LIMIT = 20
 private const val POLL_DELAY_MILLIS = 1000L
 private const val POLL_ATTEMPTS = 60
+private const val WEBSOCKET_TIMEOUT = POLL_DELAY_MILLIS * POLL_ATTEMPTS
 
 data class CheckUiState(
     val checkType: CheckType? = null,
@@ -34,6 +40,7 @@ data class CheckUiState(
 class CheckViewModel @Inject constructor(
     private val submitCheck: SubmitCheckUseCase,
     private val getCheckResult: GetCheckResultUseCase,
+    private val observeJobUpdates: ObserveJobUpdatesUseCase,
     private val mapper: CheckMapper
 ) : ViewModel() {
 
@@ -159,6 +166,9 @@ class CheckViewModel @Inject constructor(
     }
 
     private suspend fun waitForCompletion(jobId: String, type: CheckType): CheckResult {
+        val webSocketResult = runCatching { waitForWebSocketCompletion(jobId, type) }.getOrNull()
+        if (webSocketResult != null) return webSocketResult
+
         repeat(POLL_ATTEMPTS) { attempt ->
             val resultResponse = getCheckResult(jobId)
             val result = mapper.toDomain(resultResponse, type)
@@ -171,6 +181,14 @@ class CheckViewModel @Inject constructor(
         val fallbackResponse = getCheckResult(jobId)
         return mapper.toDomain(fallbackResponse, type)
     }
+
+    private suspend fun waitForWebSocketCompletion(jobId: String, type: CheckType): CheckResult? =
+        withTimeoutOrNull(WEBSOCKET_TIMEOUT) {
+            observeJobUpdates(jobId)
+                .map { mapper.toDomain(it, type) }
+                .onEach { updateHistory(it) }
+                .first { it.isTerminal() }
+        }
 
     private fun updateHistory(result: CheckResult) {
         _state.update { current ->
