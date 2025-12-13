@@ -21,6 +21,9 @@ class CheckMapper @Inject constructor(
     }
 
     fun toDomain(dto: CheckResponseDto, fallbackType: CheckType): CheckResult {
+        val jobId = dto.jobId ?: throw IllegalStateException(
+            "Отсутствует идентификатор задачи. Попробуйте повторить запрос."
+        )
         val type = CheckType.fromBackendName(dto.type) ?: fallbackType
         val detailsElement = dto.results?.takeIf { !it.isJsonNull }
             ?: dto.payload?.takeIf { !it.isJsonNull }
@@ -39,7 +42,7 @@ class CheckMapper @Inject constructor(
         val timestamp = dto.createdAtMillis ?: System.currentTimeMillis()
 
         return CheckResult(
-            jobId = dto.jobId,
+            jobId = jobId,
             type = type,
             target = target,
             status = dto.status,
