@@ -8,7 +8,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 data class CheckResponseDto(
-    @SerializedName(value = "jobId", alternate = ["job_id"])
+    @SerializedName(value = "jobId", alternate = ["job_id", "id"])
     val jobId: String? = null,
     @SerializedName(value = "status", alternate = ["state"])
     val status: String,
@@ -20,9 +20,9 @@ data class CheckResponseDto(
     val results: JsonElement? = null,
     @SerializedName(value = "payload", alternate = ["data"])
     val payload: JsonElement? = null,
-    @SerializedName(value = "createdAt", alternate = ["created_at"])
+    @SerializedName(value = "createdAt", alternate = ["created_at", "executedAt", "startedAt"])
     val createdAt: String? = null,
-    @SerializedName(value = "updatedAt", alternate = ["updated_at"])
+    @SerializedName(value = "updatedAt", alternate = ["updated_at", "finishedAt", "completedAt"])
     val updatedAt: String? = null,
     val context: CheckResponseContextDto? = null
 ) {
@@ -32,6 +32,7 @@ data class CheckResponseDto(
 
     private fun parseDate(value: String): Long? {
         val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSX",
             "yyyy-MM-dd'T'HH:mm:ss.SSSX",
             "yyyy-MM-dd'T'HH:mm:ssX",
             "yyyy-MM-dd HH:mm:ss"
